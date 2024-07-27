@@ -2,6 +2,8 @@ import streamlit as st
 import torch
 from PIL import Image
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import einops
+import torchvision.transforms as transforms
 
 MODEL_PATH = "THUDM/cogvlm2-llama3-chat-19B"
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -23,6 +25,13 @@ def load_model():
 model, tokenizer = load_model()
 
 def generate_response(query, history, image=None):
+    if image is not None:
+        preprocess = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor()
+        ])
+        image = preprocess(image).unsqueeze(0).to(DEVICE)
+
     if image is None:
         input_by_model = model.build_conversation_input_ids(
             tokenizer,
