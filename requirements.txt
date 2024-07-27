@@ -4,3 +4,4 @@ pillow
 transformers
 einops 
 torchvision
+xformers
