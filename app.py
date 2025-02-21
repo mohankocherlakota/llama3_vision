@@ -4,11 +4,9 @@ from PIL import Image
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import einops
 import torchvision.transforms as transforms
-
 MODEL_PATH = "THUDM/cogvlm2-llama3-chat-19B"
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 TORCH_TYPE = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8 else torch.float16
-
 @st.cache_resource
 def load_model():
     tokenizer = AutoTokenizer.from_pretrained(
@@ -31,7 +29,6 @@ def generate_response(query, history, image=None):
             transforms.ToTensor()
         ])
         image = preprocess(image).unsqueeze(0).to(DEVICE)
-
     if image is None:
         input_by_model = model.build_conversation_input_ids(
             tokenizer,
@@ -67,15 +64,20 @@ def generate_response(query, history, image=None):
 st.title("CogVLM2 Streamlit App")
 st.write("Upload an image and enter text to get a description from the model.")
 
+# Display for previous descriptions
+if st.button("Show History"):
+    st.write("Previous descriptions:")
+    st.write(history)
+
 uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "png", "jpeg"])
 user_input = st.text_area("Enter your text:")
-
 if st.button("Generate"):
     if uploaded_image:
         image = Image.open(uploaded_image).convert('RGB')
+        history.append({
+            'image': image,
+            'description': generate_response(user_input, history)
+        })
+        st.write(f"Description for {image.size[1]}x{image.size[0]} image: {generate_response(user_input, history)}")
     else:
-        image = None
-
-    history = []
-    response = generate_response(user_input, history, image)
-    st.write(response)
+        st.error("Please upload an image to get a description.")
